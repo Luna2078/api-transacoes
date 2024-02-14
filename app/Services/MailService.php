@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Exception;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class MailService
@@ -20,6 +21,7 @@ class MailService
 	{
 		$sendMail = Http::withoutVerifying()->get(self::URL);
 		if ($sendMail->status() != Response::HTTP_OK && $sendMail->json('message') != 'true') {
+			Log::error('[MailService::sendMail]' . $sendMail->json('message'));
 			throw new Exception('Failed to send mail.', Response::HTTP_BAD_REQUEST);
 		}
 	}

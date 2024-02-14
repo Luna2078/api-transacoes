@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\DTO\UserDTO;
 use App\Models\User;
-use App\Models\Wallet;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class UsersService
@@ -24,7 +24,7 @@ class UsersService
 	{
 		try {
 			return User::query()->where('id', '=', $id)->get()->first();
-		} catch (Exception $e) {
+		} catch (Exception) {
 			throw new Exception('User not found!');
 		}
 	}
@@ -44,6 +44,7 @@ class UsersService
 			return true;
 		} catch (Throwable $e) {
 			DB::rollBack();
+			Log::error('[UsersService::storeUser]' . $e->getMessage());
 			throw new Exception($e->getMessage(), $e->getCode());
 		}
 	}
@@ -62,6 +63,7 @@ class UsersService
 			return true;
 		} catch (Throwable $e) {
 			DB::rollBack();
+			Log::error('[UsersService::updateUser]' . $e->getMessage());
 			throw new Exception($e->getMessage(), $e->getCode());
 		}
 	}
@@ -79,6 +81,7 @@ class UsersService
 			return true;
 		} catch (Throwable $e) {
 			DB::rollBack();
+			Log::error('[UsersService::deleteUser]' . $e->getMessage());
 			throw new Exception($e->getMessage(), $e->getCode());
 		}
 	}

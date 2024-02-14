@@ -1,7 +1,7 @@
 <?php
 
+use Rap2hpoutre\LaravelLogViewer\LogViewerController;
 use App\Http\Controllers\{TransactionController, UserController};
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,9 +15,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-//Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-//    return $request->user();
-//});
 Route::prefix('v1')->group(function () {
 	Route::prefix('users')->group(function () {
 		Route::post('', [UserController::class, 'storeUser']);
@@ -30,4 +27,5 @@ Route::prefix('v1')->group(function () {
 		Route::get('{transaction_id}', [TransactionController::class, 'getTransactionById']);
 		Route::post('refund/{transaction_id}', [TransactionController::class, 'refundTransaction']);
 	});
+	Route::get('logs', [LogViewerController::class, 'index']);
 });

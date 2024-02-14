@@ -9,9 +9,9 @@ use App\Models\Transaction;
 use App\Models\Wallet;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ItemNotFoundException;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class TransactionService
@@ -58,6 +58,7 @@ class TransactionService
 			return true;
 		} catch (Throwable $e) {
 			DB::rollBack();
+			Log::error('[TransactionService::storeTransaction] ' . $e->getMessage());
 			throw new Exception($e->getMessage(), $e->getCode());
 		}
 	}
@@ -88,6 +89,7 @@ class TransactionService
 			throw new Exception('Transaction not found!', Response::HTTP_NOT_FOUND);
 		} catch (Throwable $e) {
 			DB::rollBack();
+			Log::error('[TransactionService::refundTransaction] ' . $e->getMessage());
 			throw new Exception($e->getMessage(), $e->getCode());
 		}
 	}
@@ -100,8 +102,12 @@ class TransactionService
 	 */
 	public function verifyPayer(Wallet $payer_wallet, TransactionDTO $transactionDTO): void
 	{
-		if ($payer_wallet->user_id === $transactionDTO->payee_id) throw new Exception('Payer and payee cannot be the same', Response::HTTP_BAD_REQUEST);
-		if ($payer_wallet->user->type === UserEnum::Shopkeeper) throw new Exception('Shopkeeper cannot be payer', Response::HTTP_BAD_REQUEST);
+		if ($payer_wallet->user_id === $transactionDTO->payee_id) {
+			throw new Exception('Payer and payee cannot be the same', Response::HTTP_BAD_REQUEST);
+		}
+		if ($payer_wallet->user->type === UserEnum::Shopkeeper) {
+			throw new Exception('Shopkeeper cannot be payer', Response::HTTP_BAD_REQUEST);
+		}
 	}
 	
 	/**
@@ -113,9 +119,12 @@ class TransactionService
 		try {
 			$this->authService->getAuth();
 			$this->mailService->sendMail();
-		} catch (Throwable) {
-			throw new Exception('An error occurred while getting authorization or sending the notification.',
-				Response::HTTP_BAD_REQUEST);
+		} catch (Throwable $e) {
+			Log::error('[TransactionService::finishTransaction] ' . $e->getMessage());
+			throw new Exception(
+				'An error occurred while getting authorization or sending the notification.',
+				Response::HTTP_BAD_REQUEST
+			);
 		}
 	}
 	
@@ -140,7 +149,8 @@ class TransactionService
 	private function verifyTransaction(int $transaction_id): void
 	{
 		$transaction = Transaction::query()->where('transaction_id', '=', $transaction_id)->get()->first();
-		if (!empty($transaction) && $transaction->type === TransactionEnum::Refund) throw new Exception('Transaction already refunded',
-			Response::HTTP_BAD_REQUEST);
+		if (!empty($transaction) && $transaction->type === TransactionEnum::Refund) {
+			throw new Exception('Transaction already refunded', Response::HTTP_BAD_REQUEST);
+		}
 	}
 }
