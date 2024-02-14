@@ -1,0 +1,22 @@
+version: "3"
+services:
+  back:
+    working_dir: /app
+    image: webdevops/php-apache-dev:8.2
+    container_name: back
+    depends_on:
+      - db
+    ports:
+        - "8080:80"
+    volumes:
+        - .:/app
+
+  db:
+    image: postgres
+    container_name: localdb
+    ports:
+      - "5332:5432"
+    environment:
+      POSTGRES_DB: desafio
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 123456
