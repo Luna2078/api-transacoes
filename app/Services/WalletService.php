@@ -30,9 +30,17 @@ class WalletService
 		}
 	}
 	
+	/**
+	 * @throws Exception
+	 */
 	public function getWalletUserId(int $user_id): Wallet
 	{
-		return Wallet::query()->where('user_id', $user_id)->lockForUpdate()->get()->first();
+		try {
+			return Wallet::query()->where('user_id', $user_id)->lockForUpdate()->get()->firstOrFail();
+		} catch (Exception $e) {
+			Log::error('[WalletService::getWalletUserId]' . $e->getMessage());
+			throw new Exception('Wallet not found!', Response::HTTP_NOT_FOUND);
+		}
 	}
 	
 	/**
@@ -62,6 +70,20 @@ class WalletService
 		} catch (Exception $e) {
 			Log::error('[WalletService::withdraw]' . $e->getMessage());
 			throw new Exception('Failed to withdraw.', Response::HTTP_BAD_REQUEST);
+		}
+	}
+	
+	/**
+	 * @throws Exception
+	 */
+	public function deleteWallet(int $user_id)
+	{
+		try {
+			$wallet = Wallet::query()->where('user_id', '=', $user_id)->get()->firstOrFail();
+			return $wallet->delete();
+		} catch (Exception $e) {
+			Log::error('[WalletService::deleteWallet]' . $e->getMessage());
+			throw new Exception('Wallet not found!', Response::HTTP_NOT_FOUND);
 		}
 	}
 	

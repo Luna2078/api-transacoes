@@ -58,6 +58,9 @@ class UsersService
 		try {
 			$user = User::query()->where('id', '=', $userDTO->id)->get()->first();
 			$user->fill($userDTO->toArray());
+			$wallet = $this->walletService->getWalletUserId($userDTO->id);
+			$wallet->balance = $userDTO->balance;
+			$wallet->saveOrFail();
 			$user->saveOrFail();
 			DB::commit();
 			return true;
@@ -77,6 +80,7 @@ class UsersService
 		try {
 			$user = User::query()->where('id', '=', $id)->get()->first();
 			$user->delete();
+			$this->walletService->deleteWallet($id);
 			DB::commit();
 			return true;
 		} catch (Throwable $e) {
