@@ -17,6 +17,10 @@ Possuindo no total 8 endpoints, sendo eles: <br>
 
 <br> E uma rota para os logs sendo: GET /api/v1/logs
 
+## Requisitos
+- Docker
+- Make
+
 ## Body para cadastro de usuário:
 O body do cadastro e do update de usuário é o mesmo, sendo:
 ```json
@@ -37,4 +41,6 @@ O body do cadastro e do update de usuário é o mesmo, sendo:
   "value": "float"
 }
 ```
-## Migration do banco de dados:
+## Docker:
+Para executar o processo execute o comando: make deploy
+<br>O projeto irá rodar na porta 8080
