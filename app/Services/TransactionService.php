@@ -5,39 +5,44 @@ namespace App\Services;
 use App\DTO\TransactionDTO;
 use App\Enum\TransactionEnum;
 use App\Enum\UserEnum;
+use App\Exceptions\AuthException;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\TransactionException;
 use App\Models\Transaction;
 use App\Models\Wallet;
+use App\Services\Interfaces\AuthInterfaceService;
+use App\Services\Interfaces\MailInterfaceService;
+use App\Services\Interfaces\TransactionInterfaceService;
+use App\Services\Interfaces\WalletInterfaceService;
 use Exception;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ItemNotFoundException;
-use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
-class TransactionService
+class TransactionService implements TransactionInterfaceService
 {
 	public function __construct(
-		private readonly WalletService $walletService,
-		private readonly AuthService $authService,
-		private readonly MailService $mailService
+		private readonly WalletInterfaceService $walletService,
+		private readonly AuthInterfaceService   $authService,
+		private readonly MailInterfaceService   $mailService
 	)
 	{
 	}
 	
 	/**
-	 * @throws Exception
+	 * @throws NotFoundException
 	 */
-	public function getTransactionById(string $id): Transaction
+	public function getTransactionById(int $id): Transaction
 	{
 		try {
 			return Transaction::query()->where('id', '=', $id)->get()->first();
-		} catch (Exception) {
-			throw new Exception('Transaction not found!');
+		} catch (Exception $e) {
+			throw new NotFoundException('getTransactionById', $e->getMessage(), 'Transaction not found!');
 		}
 	}
 	
 	/**
-	 * @throws Exception
+	 * @throws TransactionException
 	 */
 	public function storeTransaction(TransactionDTO $transactionDTO): bool
 	{
@@ -58,13 +63,12 @@ class TransactionService
 			return true;
 		} catch (Throwable $e) {
 			DB::rollBack();
-			Log::error('[TransactionService::storeTransaction] ' . $e->getMessage());
-			throw new Exception($e->getMessage(), $e->getCode());
+			throw new TransactionException('storeTransaction', $e->getMessage(), 'Failed to create transaction.');
 		}
 	}
 	
 	/**
-	 * @throws Exception
+	 * @throws TransactionException|NotFoundException
 	 */
 	public function refundTransaction(int $id): bool
 	{
@@ -85,12 +89,11 @@ class TransactionService
 			$this->finishTransaction();
 			DB::commit();
 			return true;
-		} catch (ItemNotFoundException) {
-			throw new Exception('Transaction not found!', Response::HTTP_NOT_FOUND);
+		} catch (ItemNotFoundException $e) {
+			throw new NotFoundException('refundTransaction', $e->getMessage(), 'Transaction not found!');
 		} catch (Throwable $e) {
 			DB::rollBack();
-			Log::error('[TransactionService::refundTransaction] ' . $e->getMessage());
-			throw new Exception($e->getMessage(), $e->getCode());
+			throw new TransactionException('refundTransaction', $e->getMessage(), 'Failed to refund transaction.');
 		}
 	}
 	
@@ -100,39 +103,31 @@ class TransactionService
 	 * @return void
 	 * @throws Exception
 	 */
-	public function verifyPayer(Wallet $payer_wallet, TransactionDTO $transactionDTO): void
+	private function verifyPayer(Wallet $payer_wallet, TransactionDTO $transactionDTO): void
 	{
 		if ($payer_wallet->user_id === $transactionDTO->payee_id) {
-			throw new Exception('Payer and payee cannot be the same', Response::HTTP_BAD_REQUEST);
+			throw new Exception('Payer and payee cannot be the same.');
 		}
 		if ($payer_wallet->user->type === UserEnum::Shopkeeper) {
-			throw new Exception('Shopkeeper cannot be payer', Response::HTTP_BAD_REQUEST);
+			throw new Exception('Shopkeeper cannot be payer.');
 		}
 	}
 	
 	/**
 	 * @return void
-	 * @throws Exception
+	 * @throws AuthException
 	 */
-	public function finishTransaction(): void
+	private function finishTransaction(): void
 	{
-		try {
-			$this->authService->getAuth();
-			$this->mailService->sendMail();
-		} catch (Throwable $e) {
-			Log::error('[TransactionService::finishTransaction] ' . $e->getMessage());
-			throw new Exception(
-				'An error occurred while getting authorization or sending the notification.',
-				Response::HTTP_BAD_REQUEST
-			);
-		}
+		$this->authService->getAuth();
+		$this->mailService->sendMail();
 	}
 	
 	/**
 	 * @param $transaction
 	 * @return Transaction
 	 */
-	public function createRefund($transaction): Transaction
+	private function createRefund($transaction): Transaction
 	{
 		$refund = new Transaction();
 		$refund->payer_id = $transaction->payee_id;
@@ -150,7 +145,7 @@ class TransactionService
 	{
 		$transaction = Transaction::query()->where('transaction_id', '=', $transaction_id)->get()->first();
 		if (!empty($transaction) && $transaction->type === TransactionEnum::Refund) {
-			throw new Exception('Transaction already refunded', Response::HTTP_BAD_REQUEST);
+			throw new Exception('Transaction already refunded');
 		}
 	}
 }

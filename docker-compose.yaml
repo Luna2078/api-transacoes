@@ -10,13 +10,14 @@ services:
         - "8080:80"
     volumes:
         - .:/app
+    env_file:
+      - .env
 
   db:
-    image: postgres
-    container_name: localdb
+    image: mysql
+    container_name: db
     ports:
-      - "5332:5432"
+      - "3306:3306"
     environment:
-      POSTGRES_DB: desafio
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: desafio

@@ -3,34 +3,37 @@
 namespace App\Services;
 
 use App\DTO\UserDTO;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\UserException;
 use App\Models\User;
+use App\Services\Interfaces\UsersInterfaceService;
+use App\Services\Interfaces\WalletInterfaceService;
 use Exception;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class UsersService
+class UsersService implements UsersInterfaceService
 {
 	public function __construct(
-		private readonly WalletService $walletService
+		private readonly WalletInterfaceService $walletService
 	)
 	{
 	}
 	
 	/**
-	 * @throws Exception
+	 * @throws NotFoundException
 	 */
 	public function getUserById(int $id): User
 	{
 		try {
 			return User::query()->where('id', '=', $id)->get()->first();
-		} catch (Exception) {
-			throw new Exception('User not found!');
+		} catch (Exception $e) {
+			throw new NotFoundException('getUserById', $e->getMessage(), 'User not found!');
 		}
 	}
 	
 	/**
-	 * @throws Exception
+	 * @throws UserException
 	 */
 	public function storeUser(UserDTO $userDTO): bool
 	{
@@ -44,13 +47,12 @@ class UsersService
 			return true;
 		} catch (Throwable $e) {
 			DB::rollBack();
-			Log::error('[UsersService::storeUser]' . $e->getMessage());
-			throw new Exception($e->getMessage(), $e->getCode());
+			throw new UserException('storeUser', $e->getMessage(), 'Failed to create user.');
 		}
 	}
 	
 	/**
-	 * @throws Exception
+	 * @throws UserException
 	 */
 	public function updateUser(UserDTO $userDTO): bool
 	{
@@ -66,13 +68,12 @@ class UsersService
 			return true;
 		} catch (Throwable $e) {
 			DB::rollBack();
-			Log::error('[UsersService::updateUser]' . $e->getMessage());
-			throw new Exception($e->getMessage(), $e->getCode());
+			throw new UserException('updateUser', $e->getMessage(), 'Failed to update user.');
 		}
 	}
 	
 	/**
-	 * @throws Exception
+	 * @throws UserException
 	 */
 	public function deleteUser(string $id): bool
 	{
@@ -85,8 +86,7 @@ class UsersService
 			return true;
 		} catch (Throwable $e) {
 			DB::rollBack();
-			Log::error('[UsersService::deleteUser]' . $e->getMessage());
-			throw new Exception($e->getMessage(), $e->getCode());
+			throw new UserException('deleteUser', $e->getMessage(), 'Failed to delete user.');
 		}
 	}
 }

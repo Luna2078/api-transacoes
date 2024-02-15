@@ -5,55 +5,41 @@ namespace App\Http\Controllers;
 use App\Factories\UserFactory;
 use App\Http\Requests\User\CreateUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
-use App\Services\UsersService;
-use Exception;
+use App\Models\User;
+use App\Services\Interfaces\UsersInterfaceService;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 class UserController extends Controller
 {
 	public function __construct(
-		private readonly UsersService $usersService
+		private readonly UsersInterfaceService $usersService
 	)
 	{
 	}
 	
-	
-	public function getUserById(string $user_id)
+	public function getUserById(string $user_id): User|JsonResponse
 	{
-		try {
-			return $this->usersService->getUserById($user_id);
-		} catch (Exception $error) {
-			return response()->json(['message' => $error->getMessage()], $error->getCode());
-		}
+		return response()->json($this->usersService->getUserById($user_id),
+			Response::HTTP_OK);
 	}
 	
 	public function storeUser(CreateUserRequest $request): JsonResponse|bool
 	{
-		try {
-			return response()->json(
-				$this->usersService->storeUser(UserFactory::toDTO($request->toArray())),
-				Response::HTTP_CREATED);
-		} catch (Exception $error) {
-			return response()->json(['message' => $error->getMessage()], $error->getCode());
-		}
+		return response()->json(
+			$this->usersService->storeUser(UserFactory::toDTO($request->toArray())),
+			Response::HTTP_CREATED);
 	}
 	
 	public function updateUser(UpdateUserRequest $request): JsonResponse|bool
 	{
-		try {
-			return $this->usersService->updateUser(UserFactory::toDTO($request->toArray()));
-		} catch (Exception $error) {
-			return response()->json(['message' => $error->getMessage()], $error->getCode());
-		}
+		return response()->json($this->usersService->updateUser(UserFactory::toDTO($request->toArray())),
+			Response::HTTP_OK);
 	}
 	
 	public function deleteUser(string $user_id): JsonResponse|bool
 	{
-		try {
-			return $this->usersService->deleteUser($user_id);
-		} catch (Exception $error) {
-			return response()->json(['message' => $error->getMessage()], $error->getCode());
-		}
+		return response()->json($this->usersService->deleteUser($user_id),
+			Response::HTTP_OK);
 	}
 }

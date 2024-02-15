@@ -2,93 +2,84 @@
 
 namespace App\Services;
 
+use App\Exceptions\NotFoundException;
+use App\Exceptions\WalletException;
 use App\Models\Wallet;
+use App\Services\Interfaces\WalletInterfaceService;
 use Exception;
-use Illuminate\Support\Facades\Log;
-use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
-class WalletService
+class WalletService implements WalletInterfaceService
 {
-	public function __construct()
-	{
-	}
-	
 	/**
-	 * @throws Throwable
+	 * @throws WalletException
 	 */
-	public function storeWallet(int $user_id, float $balance = 0): void
+	public function storeWallet(int $user_id, float $balance): void
 	{
 		try {
 			$wallet = new Wallet();
 			$wallet->user_id = $user_id;
 			$wallet->balance = $balance;
 			$wallet->saveOrFail();
-		} catch (Exception $e) {
-			Log::error('[WalletService::storeWallet]' . $e->getMessage());
-			throw new Exception('Failed to create wallet.', Response::HTTP_BAD_REQUEST);
+		} catch (Throwable $e) {
+			throw new WalletException('storeWallet', $e->getMessage(), 'Failed to create wallet.');
 		}
 	}
 	
 	/**
-	 * @throws Exception
+	 * @throws NotFoundException
 	 */
 	public function getWalletUserId(int $user_id): Wallet
 	{
 		try {
 			return Wallet::query()->where('user_id', $user_id)->lockForUpdate()->get()->firstOrFail();
 		} catch (Exception $e) {
-			Log::error('[WalletService::getWalletUserId]' . $e->getMessage());
-			throw new Exception('Wallet not found!', Response::HTTP_NOT_FOUND);
+			throw new NotFoundException('getWalletUserId', $e->getMessage(), 'Wallet not found!');
 		}
 	}
 	
 	/**
-	 * @throws Throwable
+	 * @throws WalletException
 	 */
-	public function deposit(Wallet $wallet, float $value): bool
+	private function deposit(Wallet $wallet, float $value): void
 	{
 		try {
 			$wallet->balance += $value;
-			return $wallet->saveOrFail();
-		} catch (Exception $e) {
-			Log::error('[WalletService::deposit]' . $e->getMessage());
-			throw new Exception('Failed to deposit.', Response::HTTP_BAD_REQUEST);
+			$wallet->saveOrFail();
+		} catch (Throwable $e) {
+			throw new WalletException('deposit', $e->getMessage(), 'Failed to deposit.');
 		}
 	}
 	
 	/**
-	 * @throws Throwable
-	 * @throws Exception
+	 * @throws WalletException
 	 */
-	public function withdraw(Wallet $wallet, float $value): bool
+	private function withdraw(Wallet $wallet, float $value): void
 	{
 		try {
-			if ($wallet->balance < $value) throw new Exception('Insufficient funds!', Response::HTTP_BAD_REQUEST);
+			if ($wallet->balance < $value) throw new WalletException('withdraw','Insufficient funds!');
 			$wallet->balance -= $value;
-			return $wallet->saveOrFail();
-		} catch (Exception $e) {
-			Log::error('[WalletService::withdraw]' . $e->getMessage());
-			throw new Exception('Failed to withdraw.', Response::HTTP_BAD_REQUEST);
+			$wallet->saveOrFail();
+		} catch (Throwable $e) {
+			throw new WalletException('withdraw', $e->getMessage(), 'Failed to withdraw.');
 		}
 	}
 	
 	/**
-	 * @throws Exception
+	 * @throws NotFoundException
 	 */
-	public function deleteWallet(int $user_id)
+	public function deleteWallet(int $user_id): bool
 	{
 		try {
 			$wallet = Wallet::query()->where('user_id', '=', $user_id)->get()->firstOrFail();
 			return $wallet->delete();
-		} catch (Exception $e) {
-			Log::error('[WalletService::deleteWallet]' . $e->getMessage());
-			throw new Exception('Wallet not found!', Response::HTTP_NOT_FOUND);
+		} catch (Throwable $e) {
+			throw new NotFoundException('deleteWallet', $e->getMessage(), 'Wallet not found!');
 		}
 	}
 	
 	/**
-	 * @throws Throwable
+	 * @throws NotFoundException|WalletException
 	 */
 	public function transfer(int $payer_id, int $payee_id, float $value): void
 	{
